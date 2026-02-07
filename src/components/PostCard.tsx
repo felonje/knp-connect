@@ -1,150 +1,171 @@
-import { Heart, MessageCircle, Share2, Bookmark, ThumbsUp, Laugh, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Trash2, Flag } from "lucide-react";
 import { useState } from "react";
-
-export type ReactionType = "like" | "love" | "laugh" | null;
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useComments } from "@/hooks/usePosts";
+import { toast } from "sonner";
+import type { PostWithAuthor } from "@/hooks/usePosts";
 
 interface PostCardProps {
-  author: {
-    name: string;
-    username: string;
-    avatar?: string;
-    badge?: string;
-  };
-  content: string;
-  image?: string;
-  likes: number;
-  comments: number;
-  shares?: number;
-  timeAgo: string;
-  postType?: "text" | "photo" | "event" | "announcement";
+  post: PostWithAuthor;
+  onLike: (postId: string) => void;
+  onDelete?: (postId: string) => void;
 }
 
-const reactionEmojis: Record<string, { icon: typeof Heart; label: string }> = {
-  like: { icon: ThumbsUp, label: "Like" },
-  love: { icon: Heart, label: "Love" },
-  laugh: { icon: Laugh, label: "Haha" },
-};
+const PostCard = ({ post, onLike, onDelete }: PostCardProps) => {
+  const [showComments, setShowComments] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const { user, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { comments, addComment } = useComments(post.id);
 
-const PostCard = ({ author, content, image, likes, comments, shares = 0, timeAgo, postType = "text" }: PostCardProps) => {
-  const [reaction, setReaction] = useState<ReactionType>(null);
-  const [saved, setSaved] = useState(false);
-  const [likeCount, setLikeCount] = useState(likes);
-  const [showReactions, setShowReactions] = useState(false);
+  const isOwner = user?.id === post.user_id;
 
-  const handleReaction = (type: ReactionType) => {
-    if (reaction === type) {
-      setReaction(null);
-      setLikeCount(prev => prev - 1);
-    } else {
-      if (!reaction) setLikeCount(prev => prev + 1);
-      setReaction(type);
-    }
-    setShowReactions(false);
+  const formatTime = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h`;
+    return `${Math.floor(hours / 24)}d`;
+  };
+
+  const handleComment = async () => {
+    if (!newComment.trim()) return;
+    await addComment.mutateAsync(newComment.trim());
+    setNewComment("");
+  };
+
+  const handleReport = async () => {
+    await supabase.from("reports").insert({
+      reporter_id: user!.id,
+      reported_entity_type: "post",
+      reported_entity_id: post.id,
+      reason: "Inappropriate content",
+    });
+    toast.success("Post reported");
+    setShowMenu(false);
   };
 
   return (
-    <article className="bg-card rounded-2xl border border-border overflow-hidden animate-slide-up knp-card-shadow">
-      {/* Author header */}
-      <div className="flex items-center gap-3 p-4 pb-2">
-        <div className="w-11 h-11 rounded-full knp-gradient-bg flex items-center justify-center text-sm font-bold text-primary-foreground shrink-0">
-          {author.avatar ? (
-            <img src={author.avatar} alt={author.name} className="w-full h-full rounded-full object-cover" />
+    <article className="bg-card rounded-2xl border border-border overflow-hidden animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <button
+          onClick={() => navigate(`/user/${post.user_id}`)}
+          className="w-10 h-10 rounded-full knp-gradient-bg flex items-center justify-center text-sm font-bold text-primary-foreground shrink-0 overflow-hidden"
+        >
+          {post.author.avatar_url ? (
+            <img src={post.author.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
           ) : (
-            author.name.charAt(0)
+            post.author.full_name?.charAt(0) || "U"
           )}
-        </div>
+        </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="font-semibold text-sm text-foreground truncate">{author.name}</p>
-            {author.badge && (
-              <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-primary/15 text-primary shrink-0">
-                {author.badge}
-              </span>
+            <button onClick={() => navigate(`/user/${post.user_id}`)} className="text-sm font-semibold text-foreground truncate hover:underline">
+              {post.author.full_name}
+            </button>
+            {post.author.is_verified && (
+              <span className="px-1.5 py-0.5 rounded-full text-[8px] font-bold bg-primary/15 text-primary">✓</span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">{timeAgo}</p>
+          <p className="text-[11px] text-muted-foreground">@{post.author.username} · {formatTime(post.created_at)}</p>
         </div>
-        <button className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
+        <div className="relative">
+          <button onClick={() => setShowMenu(!showMenu)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary">
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+          {showMenu && (
+            <div className="absolute right-0 top-8 bg-card border border-border rounded-xl shadow-lg z-20 py-1 min-w-[140px]">
+              {(isOwner || isAdmin) && (
+                <button onClick={() => { onDelete?.(post.id); setShowMenu(false); }} className="flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-secondary w-full">
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              )}
+              {!isOwner && (
+                <button onClick={handleReport} className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:bg-secondary w-full">
+                  <Flag className="w-4 h-4" /> Report
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Content */}
       <div className="px-4 pb-3">
-        <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">{content}</p>
+        <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">{post.content}</p>
       </div>
 
       {/* Image */}
-      {image && (
-        <div className="bg-muted">
-          <img src={image} alt="" className="w-full max-h-96 object-cover" />
+      {post.image_url && (
+        <div className="w-full max-h-80 overflow-hidden">
+          <img src={post.image_url} alt="" className="w-full h-full object-cover" />
         </div>
       )}
 
-      {/* Reaction counts */}
+      {/* Stats */}
       <div className="flex items-center justify-between px-4 py-2 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1">
-          <span className="flex -space-x-1">
-            <span className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center text-[8px]">👍</span>
-            <span className="w-4 h-4 rounded-full bg-red-500 flex items-center justify-center text-[8px]">❤️</span>
-          </span>
-          <span className="ml-1">{likeCount}</span>
-        </div>
-        <div className="flex gap-3">
-          <span>{comments} comments</span>
-          {shares > 0 && <span>{shares} shares</span>}
-        </div>
+        <span>{post.likes_count} likes</span>
+        <span>{post.comments_count} comments</span>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center border-t border-border/50 relative">
-        {/* Reaction picker */}
-        {showReactions && (
-          <div className="absolute bottom-full left-2 mb-1 flex items-center gap-1 bg-card border border-border rounded-full px-2 py-1.5 shadow-xl animate-slide-up z-10">
-            {Object.entries(reactionEmojis).map(([key, { label }]) => (
-              <button
-                key={key}
-                onClick={() => handleReaction(key as ReactionType)}
-                className="text-lg hover:scale-125 transition-transform px-1"
-                title={label}
-              >
-                {key === "like" ? "👍" : key === "love" ? "❤️" : "😂"}
-              </button>
-            ))}
-          </div>
-        )}
-
+      <div className="flex items-center border-t border-border">
         <button
-          onClick={() => handleReaction("like")}
-          onMouseEnter={() => setShowReactions(true)}
-          onMouseLeave={() => setShowReactions(false)}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-all ${
-            reaction ? "text-primary" : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+          onClick={() => onLike(post.id)}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors ${
+            post.user_has_liked ? "text-red-500" : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          {reaction === "love" ? "❤️" : reaction === "laugh" ? "😂" : <ThumbsUp className={`w-4 h-4 ${reaction === "like" ? "fill-current" : ""}`} />}
-          <span>{reaction ? reactionEmojis[reaction]?.label || "Like" : "Like"}</span>
+          <Heart className={`w-4 h-4 ${post.user_has_liked ? "fill-current" : ""}`} />
+          Like
         </button>
-
-        <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors">
+        <button
+          onClick={() => setShowComments(!showComments)}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
           <MessageCircle className="w-4 h-4" />
-          <span>Comment</span>
+          Comment
         </button>
-
-        <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors">
+        <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground">
           <Share2 className="w-4 h-4" />
-          <span>Share</span>
-        </button>
-
-        <button
-          onClick={() => setSaved(!saved)}
-          className={`px-3 py-2.5 transition-all ${
-            saved ? "text-accent" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Bookmark className={`w-4 h-4 ${saved ? "fill-current" : ""}`} />
+          Share
         </button>
       </div>
+
+      {/* Comments Section */}
+      {showComments && (
+        <div className="border-t border-border px-4 py-3">
+          {comments.map((c) => (
+            <div key={c.id} className="flex gap-2 mb-2">
+              <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-foreground shrink-0">
+                {c.author?.full_name?.charAt(0) || "U"}
+              </div>
+              <div className="bg-secondary rounded-xl px-3 py-1.5 flex-1">
+                <p className="text-[11px] font-semibold text-foreground">{c.author?.full_name || "Unknown"}</p>
+                <p className="text-xs text-foreground/80">{c.content}</p>
+              </div>
+            </div>
+          ))}
+          <div className="flex gap-2 mt-2">
+            <input
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleComment()}
+              placeholder="Write a comment..."
+              className="flex-1 h-8 px-3 rounded-full bg-secondary border border-border text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+            />
+            <button onClick={handleComment} disabled={!newComment.trim()} className="px-3 h-8 rounded-full knp-gradient-bg text-primary-foreground text-xs font-semibold disabled:opacity-50">
+              Post
+            </button>
+          </div>
+        </div>
+      )}
     </article>
   );
 };

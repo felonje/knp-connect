@@ -1,32 +1,43 @@
-import { Plus } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface StoryCircleProps {
   name: string;
   isOwn?: boolean;
   hasStatus?: boolean;
-  emoji?: string;
+  avatarUrl?: string | null;
 }
 
-const StoryCircle = ({ name, isOwn = false, hasStatus = true, emoji }: StoryCircleProps) => {
+const StoryCircle = ({ name, isOwn = false, hasStatus = true, avatarUrl }: StoryCircleProps) => {
+  const { profile } = useAuth();
+
+  const displayAvatar = isOwn ? profile?.avatar_url : avatarUrl;
+  const displayInitial = isOwn ? (profile?.full_name?.charAt(0) || "U") : (name?.charAt(0) || "U");
+
   return (
-    <button className="flex flex-col items-center gap-1.5 min-w-[68px]">
-      <div className="relative">
-        <div className={`w-16 h-16 rounded-full p-[2.5px] ${hasStatus && !isOwn ? "knp-gradient-bg" : "bg-border"}`}>
-          <div className="w-full h-full rounded-full bg-card flex items-center justify-center">
-            {emoji ? (
-              <span className="text-xl">{emoji}</span>
-            ) : (
-              <span className="text-lg font-bold text-foreground">{name.charAt(0)}</span>
-            )}
-          </div>
+    <button className="flex flex-col items-center gap-1 min-w-[60px]">
+      <div
+        className={`w-14 h-14 rounded-full p-[2px] ${
+          isOwn
+            ? "border-2 border-dashed border-muted-foreground"
+            : hasStatus
+              ? "knp-gradient-bg"
+              : "border-2 border-border"
+        }`}
+      >
+        <div className="w-full h-full rounded-full bg-card flex items-center justify-center overflow-hidden relative">
+          {displayAvatar ? (
+            <img src={displayAvatar} alt={name} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-lg font-bold text-foreground">{displayInitial}</span>
+          )}
+          {isOwn && (
+            <div className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold border border-background">
+              +
+            </div>
+          )}
         </div>
-        {isOwn && (
-          <div className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center border-2 border-card">
-            <Plus className="w-3 h-3" />
-          </div>
-        )}
       </div>
-      <span className="text-[10px] text-muted-foreground font-medium truncate w-full text-center">
+      <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[56px]">
         {isOwn ? "My Status" : name}
       </span>
     </button>
