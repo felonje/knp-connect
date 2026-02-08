@@ -48,7 +48,7 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast.success("Check your email to verify your account! 📧");
+        toast.success("Welcome to KNP Connect! Check your email to verify your account 📧");
       }
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
