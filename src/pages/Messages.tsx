@@ -1,13 +1,15 @@
 import { Search, Edit, Users as UsersIcon } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
+import CreateGroupModal from "@/components/CreateGroupModal";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useConversations, useCreateConversation } from "@/hooks/useMessages";
+import { useConversations } from "@/hooks/useMessages";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Messages = () => {
   const [activeFilter, setActiveFilter] = useState<"all" | "personal" | "groups">("all");
+  const [showNewChat, setShowNewChat] = useState(false);
   const { conversations, isLoading } = useConversations();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -46,6 +48,12 @@ const Messages = () => {
       <main className="pt-14 pb-20 max-w-lg mx-auto">
         <div className="flex items-center justify-between px-4 py-4">
           <h1 className="text-xl font-bold text-foreground">Chats</h1>
+          <button
+            onClick={() => setShowNewChat(true)}
+            className="p-2 rounded-xl text-primary hover:bg-secondary transition-colors"
+          >
+            <Edit className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Search */}
@@ -87,6 +95,12 @@ const Messages = () => {
             <div className="text-center text-muted-foreground text-sm py-12">
               <p className="text-2xl mb-2">💬</p>
               <p>No conversations yet</p>
+              <button
+                onClick={() => setShowNewChat(true)}
+                className="mt-3 px-4 py-2 rounded-full knp-gradient-bg text-primary-foreground text-xs font-semibold"
+              >
+                Start a Chat
+              </button>
             </div>
           ) : (
             filtered.map((conv, i) => (
@@ -128,6 +142,7 @@ const Messages = () => {
         </div>
       </main>
       <BottomNav />
+      <CreateGroupModal open={showNewChat} onClose={() => setShowNewChat(false)} />
     </div>
   );
 };
