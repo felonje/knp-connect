@@ -16,6 +16,7 @@ import EditProfile from "./pages/EditProfile";
 import UserProfile from "./pages/UserProfile";
 import Notifications from "./pages/Notifications";
 import Admin from "./pages/Admin";
+import Reels from "./pages/Reels";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/edit-profile" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
             <Route path="/user/:id" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+            <Route path="/reels" element={<ProtectedRoute><Reels /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
