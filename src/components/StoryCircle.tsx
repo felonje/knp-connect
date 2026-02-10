@@ -5,16 +5,17 @@ interface StoryCircleProps {
   isOwn?: boolean;
   hasStatus?: boolean;
   avatarUrl?: string | null;
+  onClick?: () => void;
 }
 
-const StoryCircle = ({ name, isOwn = false, hasStatus = true, avatarUrl }: StoryCircleProps) => {
+const StoryCircle = ({ name, isOwn = false, hasStatus = true, avatarUrl, onClick }: StoryCircleProps) => {
   const { profile } = useAuth();
 
   const displayAvatar = isOwn ? profile?.avatar_url : avatarUrl;
   const displayInitial = isOwn ? (profile?.full_name?.charAt(0) || "U") : (name?.charAt(0) || "U");
 
   return (
-    <button className="flex flex-col items-center gap-1 min-w-[60px]">
+    <button onClick={onClick} className="flex flex-col items-center gap-1 min-w-[60px]">
       <div
         className={`w-14 h-14 rounded-full p-[2px] ${
           isOwn

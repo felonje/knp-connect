@@ -100,8 +100,13 @@ const PostCard = ({ post, onLike, onDelete }: PostCardProps) => {
         <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">{post.content}</p>
       </div>
 
-      {/* Image */}
-      {post.image_url && (
+      {/* Media */}
+      {post.video_url && (
+        <div className="w-full max-h-80 overflow-hidden">
+          <video src={post.video_url} className="w-full h-full object-cover" controls playsInline />
+        </div>
+      )}
+      {post.image_url && !post.video_url && (
         <div className="w-full max-h-80 overflow-hidden">
           <img src={post.image_url} alt="" className="w-full h-full object-cover" />
         </div>
@@ -131,7 +136,17 @@ const PostCard = ({ post, onLike, onDelete }: PostCardProps) => {
           <MessageCircle className="w-4 h-4" />
           Comment
         </button>
-        <button className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground">
+        <button
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({ text: post.content, url: window.location.origin });
+            } else {
+              navigator.clipboard.writeText(`${post.content}\n${window.location.origin}`);
+              toast.success("Link copied!");
+            }
+          }}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+        >
           <Share2 className="w-4 h-4" />
           Share
         </button>
