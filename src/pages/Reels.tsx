@@ -133,7 +133,16 @@ const Reels = () => {
                   <span className="text-white text-[10px] font-semibold">{formatCount(reel.comments_count)}</span>
                 </button>
 
-                <button className="flex flex-col items-center gap-1">
+                <button
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ text: reel.content, url: window.location.origin });
+                    } else {
+                      navigator.clipboard.writeText(`${reel.content}\n${window.location.origin}`);
+                    }
+                  }}
+                  className="flex flex-col items-center gap-1"
+                >
                   <div className="w-10 h-10 rounded-full bg-black/30 flex items-center justify-center">
                     <Share2 className="w-5 h-5 text-white" />
                   </div>

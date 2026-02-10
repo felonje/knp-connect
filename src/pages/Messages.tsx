@@ -10,15 +10,28 @@ import { useAuth } from "@/contexts/AuthContext";
 const Messages = () => {
   const [activeFilter, setActiveFilter] = useState<"all" | "personal" | "groups">("all");
   const [showNewChat, setShowNewChat] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { conversations, isLoading } = useConversations();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const filtered = conversations.filter((c) => {
-    if (activeFilter === "all") return true;
-    if (activeFilter === "personal") return !c.is_group;
-    return c.is_group;
-  });
+  const getChatName = (conv: typeof conversations[0]) => {
+    if (conv.is_group) return conv.name || "Group Chat";
+    const other = conv.members.find((m) => m.user_id !== user?.id);
+    return other?.full_name || "Chat";
+  };
+
+  const filtered = conversations
+    .filter((c) => {
+      if (activeFilter === "personal") return !c.is_group;
+      if (activeFilter === "groups") return c.is_group;
+      return true;
+    })
+    .filter((c) => {
+      if (!searchQuery.trim()) return true;
+      const name = getChatName(c).toLowerCase();
+      return name.includes(searchQuery.toLowerCase());
+    });
 
   const formatTime = (dateStr?: string) => {
     if (!dateStr) return "";
@@ -28,12 +41,6 @@ const Messages = () => {
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h`;
     return `${Math.floor(hours / 24)}d`;
-  };
-
-  const getChatName = (conv: typeof conversations[0]) => {
-    if (conv.is_group) return conv.name || "Group Chat";
-    const other = conv.members.find((m) => m.user_id !== user?.id);
-    return other?.full_name || "Chat";
   };
 
   const getChatAvatar = (conv: typeof conversations[0]) => {
@@ -63,6 +70,8 @@ const Messages = () => {
             <input
               type="text"
               placeholder="Search chats..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-10 pl-10 pr-4 rounded-xl bg-secondary border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
@@ -94,13 +103,15 @@ const Messages = () => {
           ) : filtered.length === 0 ? (
             <div className="text-center text-muted-foreground text-sm py-12">
               <p className="text-2xl mb-2">💬</p>
-              <p>No conversations yet</p>
-              <button
-                onClick={() => setShowNewChat(true)}
-                className="mt-3 px-4 py-2 rounded-full knp-gradient-bg text-primary-foreground text-xs font-semibold"
-              >
-                Start a Chat
-              </button>
+              <p>{searchQuery ? "No chats found" : "No conversations yet"}</p>
+              {!searchQuery && (
+                <button
+                  onClick={() => setShowNewChat(true)}
+                  className="mt-3 px-4 py-2 rounded-full knp-gradient-bg text-primary-foreground text-xs font-semibold"
+                >
+                  Start a Chat
+                </button>
+              )}
             </div>
           ) : (
             filtered.map((conv, i) => (

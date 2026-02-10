@@ -1,4 +1,4 @@
-import { Settings, MapPin, Link as LinkIcon, Calendar, Grid3X3, Bookmark, Camera, GraduationCap, LogOut, Shield } from "lucide-react";
+import { Settings, MapPin, Link as LinkIcon, Calendar, Grid3X3, Camera, GraduationCap, LogOut, Shield } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,7 +9,7 @@ import AppHeader from "@/components/AppHeader";
 import BottomNav from "@/components/BottomNav";
 
 const Profile = () => {
-  const [activeTab, setActiveTab] = useState<"posts" | "saved">("posts");
+  const [activeTab] = useState<"posts">("posts");
   const { profile, user, signOut, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { followers, following } = useFollowCounts(user?.id);
@@ -121,30 +121,13 @@ const Profile = () => {
 
         {/* Tabs */}
         <div className="flex border-b border-border">
-          <button
-            onClick={() => setActiveTab("posts")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors relative ${
-              activeTab === "posts" ? "text-primary" : "text-muted-foreground"
-            }`}
+          <div
+            className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium text-primary relative"
           >
             <Grid3X3 className="w-4 h-4" />
             Posts
-            {activeTab === "posts" && (
-              <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 knp-gradient-bg rounded-full" />
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("saved")}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors relative ${
-              activeTab === "saved" ? "text-primary" : "text-muted-foreground"
-            }`}
-          >
-            <Bookmark className="w-4 h-4" />
-            Saved
-            {activeTab === "saved" && (
-              <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 knp-gradient-bg rounded-full" />
-            )}
-          </button>
+            <div className="absolute bottom-0 left-1/4 right-1/4 h-0.5 knp-gradient-bg rounded-full" />
+          </div>
         </div>
 
         {/* Posts Grid */}
