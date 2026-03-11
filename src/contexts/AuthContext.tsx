@@ -3,6 +3,39 @@ import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
+// Set to true to bypass real auth and use a mock user
+const SIMULATE_AUTH = true;
+
+const MOCK_USER_ID = "00000000-0000-0000-0000-000000000001";
+
+const mockUser = {
+  id: MOCK_USER_ID,
+  email: "demo@knpconnect.app",
+  app_metadata: {},
+  user_metadata: { username: "demo_user", full_name: "Demo User" },
+  aud: "authenticated",
+  created_at: new Date().toISOString(),
+} as unknown as User;
+
+const mockSession = {
+  access_token: "mock-token",
+  refresh_token: "mock-refresh",
+  expires_in: 3600,
+  token_type: "bearer",
+  user: mockUser,
+} as unknown as Session;
+
+const mockProfile = {
+  id: MOCK_USER_ID,
+  user_id: MOCK_USER_ID,
+  username: "demo_user",
+  full_name: "Demo User",
+  avatar_url: null,
+  bio: "This is a simulated account for testing.",
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+} as unknown as Tables<"profiles">;
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -28,12 +61,12 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Tables<"profiles"> | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [session, setSession] = useState<Session | null>(SIMULATE_AUTH ? mockSession : null);
+  const [user, setUser] = useState<User | null>(SIMULATE_AUTH ? mockUser : null);
+  const [profile, setProfile] = useState<Tables<"profiles"> | null>(SIMULATE_AUTH ? mockProfile : null);
+  const [isAdmin, setIsAdmin] = useState(SIMULATE_AUTH);
   const [isModerator, setIsModerator] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!SIMULATE_AUTH);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -55,13 +88,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshProfile = async () => {
+    if (SIMULATE_AUTH) return;
     if (user) {
       await fetchProfile(user.id);
     }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    if (!SIMULATE_AUTH) {
+      await supabase.auth.signOut();
+    }
     setSession(null);
     setUser(null);
     setProfile(null);
@@ -70,6 +106,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    if (SIMULATE_AUTH) return;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
